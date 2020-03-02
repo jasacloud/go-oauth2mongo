@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"github.com/jasacloud/go-libraries/db"
 	"github.com/jasacloud/go-libraries/db/mongoc"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/x/bsonx"
 	"log"
 	"time"
 
-	"github.com/globalsign/mgo/bson"
 	"gopkg.in/oauth2.v3"
 	"gopkg.in/oauth2.v3/models"
 )
@@ -153,8 +153,7 @@ func (ts *TokenStore) Create(info oauth2.TokenInfo) (err error) {
 			aexp = rexp
 		}
 	}
-	id := bson.NewObjectId().Hex()
-
+	id := primitive.NewObjectID().String()
 	ts.cHandler(ts.tcfg.BasicCName, func(c *mongo.Collection) {
 		_, err = c.InsertOne(context.TODO(), basicData{
 			ID:        id,
