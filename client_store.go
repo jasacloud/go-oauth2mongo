@@ -7,7 +7,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"gopkg.in/oauth2.v3"
 	"gopkg.in/oauth2.v3/models"
-	"log"
 )
 
 // ClientConfig client configuration parameters
@@ -62,33 +61,15 @@ func (cs *ClientStore) c(name string) *mongo.Collection {
 	return cs.conn.Collection
 }
 
-func (cs *ClientStore) cHandler(name string, handler func(c *mongo.Collection, sc mongo.SessionContext) error) {
+func (cs *ClientStore) cHandler(name string, handler func(c *mongo.Collection)) {
 	cs.conn.C(name)
-	ctx := context.Background()
-	var session mongo.Session
-	var err error
-	if session, err = cs.conn.Client.StartSession(); err != nil {
-		log.Println(err)
-		return
-	}
-	if err = session.StartTransaction(); err != nil {
-		log.Println(err)
-		return
-	}
-	h := func(sc mongo.SessionContext) error {
-		return handler(cs.conn.Collection, sc)
-	}
-	if err = mongo.WithSession(ctx, session, h); err != nil {
-		log.Println(err)
-		return
-	}
-	session.EndSession(ctx)
+	handler(cs.conn.Collection)
 	return
 }
 
 // Set set client information
 func (cs *ClientStore) Set(info oauth2.ClientInfo) (err error) {
-	cs.cHandler(cs.ccfg.ClientsCName, func(c *mongo.Collection, sc mongo.SessionContext) error {
+	cs.cHandler(cs.ccfg.ClientsCName, func(c *mongo.Collection) {
 		entity := &client{
 			ID:     info.GetID(),
 			Secret: info.GetSecret(),
@@ -98,9 +79,8 @@ func (cs *ClientStore) Set(info oauth2.ClientInfo) (err error) {
 
 		if _, cerr := c.InsertOne(context.TODO(), entity); cerr != nil {
 			err = cerr
-			return err
+			return
 		}
-		return nil
 	})
 
 	return
@@ -108,11 +88,11 @@ func (cs *ClientStore) Set(info oauth2.ClientInfo) (err error) {
 
 // GetByID according to the ID for the client information
 func (cs *ClientStore) GetByID(id string) (info oauth2.ClientInfo, err error) {
-	cs.cHandler(cs.ccfg.ClientsCName, func(c *mongo.Collection, sc mongo.SessionContext) error {
+	cs.cHandler(cs.ccfg.ClientsCName, func(c *mongo.Collection) {
 		entity := new(client)
 		if cerr := c.FindOne(context.TODO(), db.Map{"id": id}).Decode(&entity); cerr != nil {
 			err = cerr
-			return err
+			return
 		}
 
 		info = &models.Client{
@@ -121,7 +101,6 @@ func (cs *ClientStore) GetByID(id string) (info oauth2.ClientInfo, err error) {
 			Domain: entity.Domain,
 			UserID: entity.UserID,
 		}
-		return nil
 	})
 
 	return
@@ -129,12 +108,11 @@ func (cs *ClientStore) GetByID(id string) (info oauth2.ClientInfo, err error) {
 
 // RemoveByID use the client id to delete the client information
 func (cs *ClientStore) RemoveByID(id string) (err error) {
-	cs.cHandler(cs.ccfg.ClientsCName, func(c *mongo.Collection, sc mongo.SessionContext) error {
+	cs.cHandler(cs.ccfg.ClientsCName, func(c *mongo.Collection) {
 		if _, cerr := c.DeleteOne(context.TODO(), db.Map{"id": id}); cerr != nil {
 			err = cerr
-			return err
+			return
 		}
-		return nil
 	})
 
 	return
