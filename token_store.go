@@ -9,6 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/x/bsonx"
 	"log"
+	"sync"
 	"time"
 
 	"gopkg.in/oauth2.v3"
@@ -25,6 +26,15 @@ type TokenConfig struct {
 	AccessCName string
 	// store refresh token data collection name(The default is oauth2_refresh)
 	RefreshCName string
+}
+
+type StorageIndexed struct {
+	sync.RWMutex
+	Col map[string]bool
+}
+
+var storageIndexed = &StorageIndexed{
+	Col: make(map[string]bool),
 }
 
 // NewDefaultTokenConfig create a default token configuration
@@ -75,31 +85,20 @@ func NewTokenStoreWithSession(conn *mongoc.Connections, tcfgs ...*TokenConfig) (
 	})
 	index3.CreateIndexesOptions.SetMaxTime(time.Second * 1)
 
-	if !ts.conn.Indexed {
-		conn.Indexed = false
-		ts.conn.C(ts.tcfg.BasicCName)
-		err := ts.conn.CreateIndexes(index)
-		if err != nil {
-			log.Println("EnsureNodeIndexed:", err)
-			return
-		}
-		conn.Indexed = false
-		ts.conn.C(ts.tcfg.AccessCName)
-		err = ts.conn.CreateIndexes(index2)
-		if err != nil {
-			log.Println("EnsureNodeIndexed:", err)
-			return
-		}
-		conn.Indexed = false
-		ts.conn.C(ts.tcfg.RefreshCName)
-		err = ts.conn.CreateIndexes(index3)
-		if err != nil {
-			log.Println("EnsureNodeIndexed:", err)
-			return
-		}
-
-		ts.conn.Indexed = true
+	storageIndexed.RLock()
+	if storageIndexed.Col[conn.Collection.Name()] {
+		storageIndexed.RUnlock()
+		return
 	}
+	storageIndexed.RUnlock()
+
+	_, err := conn.CreateIndexes(index, index2)
+	if err != nil {
+		log.Printf("NewTokenStoreWithSession->CreateIndexes to '%s' returned error: %v \n", conn.Collection.Name(), err)
+	}
+	storageIndexed.Lock()
+	storageIndexed.Col[conn.Collection.Name()] = true
+	storageIndexed.Unlock()
 
 	store = ts
 	return
