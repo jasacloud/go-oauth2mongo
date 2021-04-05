@@ -92,7 +92,7 @@ func NewTokenStoreWithSession(conn *mongoc.Connections, tcfgs ...*TokenConfig) (
 	}
 	storageIndexed.RUnlock()
 
-	_, err := conn.CreateIndexes(index, index2)
+	_, err := conn.CreateIndexes(index, index2, index3)
 	if err != nil {
 		log.Printf("NewTokenStoreWithSession->CreateIndexes to '%s' returned error: %v \n", conn.Collection.Name(), err)
 	}
