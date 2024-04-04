@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"github.com/jasacloud/go-libraries/db"
 	"github.com/jasacloud/go-libraries/db/mongoc"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/x/bsonx"
 	"log"
 	"sync"
 	"time"
@@ -68,20 +68,20 @@ func NewTokenStoreWithSession(conn *mongoc.Connections, tcfgs ...*TokenConfig) (
 	}
 
 	index := mongoc.NewIndex()
-	index.AddKeys(bsonx.Doc{
-		{Key: "ExpiredAt", Value: bsonx.Int32(int32(1))},
+	index.AddKeys(bson.D{
+		{Key: "ExpiredAt", Value: 1},
 	})
 	index.CreateIndexesOptions.SetMaxTime(time.Second * 1)
 
 	index2 := mongoc.NewIndex()
-	index2.AddKeys(bsonx.Doc{
-		{Key: "ExpiredAt", Value: bsonx.Int32(int32(1))},
+	index2.AddKeys(bson.D{
+		{Key: "ExpiredAt", Value: 1},
 	})
 	index2.CreateIndexesOptions.SetMaxTime(time.Second * 1)
 
 	index3 := mongoc.NewIndex()
-	index3.AddKeys(bsonx.Doc{
-		{Key: "ExpiredAt", Value: bsonx.Int32(int32(1))},
+	index3.AddKeys(bson.D{
+		{Key: "ExpiredAt", Value: 1},
 	})
 	index3.CreateIndexesOptions.SetMaxTime(time.Second * 1)
 
